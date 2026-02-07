@@ -1,0 +1,248 @@
+---
+name: 🤖 Dependabot Auto-Merge
+
+on:
+  pull_request:
+    types: [opened, reopened, synchronize, ready_for_review]
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  # ============================================
+  # JOB 1: Analizar PR de Dependabot
+  # ============================================
+  analyze-pr:
+    name: 📊 Analyze Dependabot PR
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    
+    outputs:
+      update-type: ${{ steps.metadata.outputs.update-type }}
+      dependency-type: ${{ steps.metadata.outputs.dependency-type }}
+      auto-merge-eligible: ${{ steps.check-eligibility.outputs.eligible }}
+      dependency-names: ${{ steps.metadata.outputs.dependency-names }}
+    
+    steps:
+      - name: 📝 Fetch Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: 📋 Display PR information
+        run: |
+          echo "### 📦 Dependency Update Information" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Package**: ${{ steps.metadata.outputs.dependency-names }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Type**: ${{ steps.metadata.outputs.dependency-type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Update type**: ${{ steps.metadata.outputs.update-type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Previous**: ${{ steps.metadata.outputs.previous-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **New**: ${{ steps.metadata.outputs.new-version }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: 🔍 Check auto-merge eligibility
+        id: check-eligibility
+        run: |
+          UPDATE_TYPE="${{ steps.metadata.outputs.update-type }}"
+          DEPENDENCY_TYPE="${{ steps.metadata.outputs.dependency-type }}"
+          
+          echo "Update type: $UPDATE_TYPE"
+          echo "Dependency type: $DEPENDENCY_TYPE"
+          
+          # Auto-merge elegible para:
+          # - Patches de cualquier dependencia
+          # - Minors de dependencias de desarrollo
+          if [[ "$UPDATE_TYPE" == "version-update:semver-patch" ]] || \
+             [[ "$UPDATE_TYPE" == "version-update:semver-minor" && "$DEPENDENCY_TYPE" == "development" ]]; then
+            echo "eligible=true" >> $GITHUB_OUTPUT
+            echo "✅ Eligible for auto-merge"
+          else
+            echo "eligible=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Not eligible for auto-merge (requires manual review)"
+          fi
+
+  # ============================================
+  # JOB 2: CI Tests
+  # ============================================
+  ci-tests:
+    name: 🧪 Run CI Tests
+    needs: analyze-pr
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    
+    defaults:
+      run:
+        working-directory: ./src/app
+    
+    steps:
+      - name: 📥 Checkout PR
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './src/app/package-lock.json'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🔍 Run linter
+        run: npm run lint
+        continue-on-error: false
+
+      - name: 🏗️ Build application
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+
+      - name: 📊 Build Summary
+        run: |
+          echo "### ✅ CI Tests Passed" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- Lint: ✅ Passed" >> $GITHUB_STEP_SUMMARY
+          echo "- Build: ✅ Passed" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================
+  # JOB 3: Security Scan
+  # ============================================
+  security-scan:
+    name: 🔒 Security Scan
+    needs: analyze-pr
+    runs-on: ubuntu-latest
+    if: github.actor == 'dependabot[bot]'
+    
+    defaults:
+      run:
+        working-directory: ./src/app
+    
+    steps:
+      - name: 📥 Checkout PR
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.ref }}
+
+      - name: 🔧 Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: './src/app/package-lock.json'
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🔒 Run npm audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+      - name: 📊 Audit Summary
+        run: |
+          echo "### 🔒 Security Scan" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- npm audit: ✅ Completed" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================
+  # JOB 4: Auto-Approve (for eligible updates)
+  # ============================================
+  auto-approve:
+    name: ✅ Auto-Approve PR
+    needs: [analyze-pr, ci-tests, security-scan]
+    runs-on: ubuntu-latest
+    if: |
+      github.actor == 'dependabot[bot]' &&
+      needs.analyze-pr.outputs.auto-merge-eligible == 'true'
+    
+    permissions:
+      pull-requests: write
+    
+    steps:
+      - name: ✅ Approve pull request
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          gh pr review "$PR_URL" --approve --body "✅ Auto-approved by Dependabot workflow. Update type: ${{ needs.analyze-pr.outputs.update-type }}"
+
+      - name: 📊 Approval Summary
+        run: |
+          echo "### ✅ Auto-Approved" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "This PR has been auto-approved because:" >> $GITHUB_STEP_SUMMARY
+          echo "- Update type: ${{ needs.analyze-pr.outputs.update-type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- All CI tests passed" >> $GITHUB_STEP_SUMMARY
+          echo "- Security scan completed" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================
+  # JOB 5: Auto-Merge (for eligible updates)
+  # ============================================
+  auto-merge:
+    name: 🚀 Auto-Merge PR
+    needs: [analyze-pr, ci-tests, security-scan, auto-approve]
+    runs-on: ubuntu-latest
+    if: |
+      github.actor == 'dependabot[bot]' &&
+      needs.analyze-pr.outputs.auto-merge-eligible == 'true'
+    
+    permissions:
+      contents: write
+      pull-requests: write
+    
+    steps:
+      - name: 🤖 Enable auto-merge
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          gh pr merge "$PR_URL" --auto --squash --delete-branch
+
+      - name: 📊 Merge Summary
+        run: |
+          echo "### 🚀 Auto-Merge Enabled" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Package**: ${{ needs.analyze-pr.outputs.dependency-names }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Update type**: ${{ needs.analyze-pr.outputs.update-type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Status**: Auto-merge enabled, will merge when all checks pass" >> $GITHUB_STEP_SUMMARY
+
+  # ============================================
+  # JOB 6: Comment on Manual Review PRs
+  # ============================================
+  manual-review-comment:
+    name: 💬 Comment on Manual Review PR
+    needs: [analyze-pr, ci-tests, security-scan]
+    runs-on: ubuntu-latest
+    if: |
+      github.actor == 'dependabot[bot]' &&
+      needs.analyze-pr.outputs.auto-merge-eligible == 'false'
+    
+    permissions:
+      pull-requests: write
+    
+    steps:
+      - name: 💬 Add comment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          gh pr comment "$PR_URL" --body "⚠️ **Manual Review Required**
+          
+          This PR updates **${{ needs.analyze-pr.outputs.dependency-names }}** with update type: **${{ needs.analyze-pr.outputs.update-type }}**
+          
+          CI tests have passed, but this update requires manual review before merging because:
+          - Major version updates need careful evaluation
+          - Production dependency updates require validation
+          
+          Please review the changes and approve if safe to merge."
+
+      - name: 📊 Manual Review Summary
+        run: |
+          echo "### ⚠️ Manual Review Required" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Package**: ${{ needs.analyze-pr.outputs.dependency-names }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Update type**: ${{ needs.analyze-pr.outputs.update-type }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Reason**: Major version or production dependency" >> $GITHUB_STEP_SUMMARY
