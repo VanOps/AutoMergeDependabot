@@ -1,0 +1,80 @@
+---
+name: 🔄 Auto-Rebase Dependabot PRs
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  rebase-dependabot-prs:
+    name: 🔄 Rebase Dependabot PRs
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📋 List open Dependabot PRs
+        id: list-prs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Obtener PRs abiertas de Dependabot (en una sola línea)
+          prs=$(gh pr list \
+            --repo ${{ github.repository }} \
+            --author "app/dependabot" \
+            --state open \
+            --json number \
+            --jq '[.[].number] | join(" ")')
+
+          echo "Found PRs: $prs"
+          echo "pr_numbers=$prs" >> $GITHUB_OUTPUT
+
+      - name: 🔄 Rebase Dependabot PRs
+        if: steps.list-prs.outputs.pr_numbers != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Rebasar cada PR de Dependabot usando GitHub API
+          for pr_number in ${{ steps.list-prs.outputs.pr_numbers }}; do
+            echo "🔄 Updating PR #$pr_number with base branch"
+            
+            # Actualizar la PR con la rama base usando GitHub API (sin expected_head_sha)
+            response=$(gh api \
+              --method PUT \
+              -H "Accept: application/vnd.github+json" \
+              -H "X-GitHub-Api-Version: 2022-11-28" \
+              "/repos/${{ github.repository }}/pulls/${pr_number}/update-branch" 2>&1) || true
+            
+            if echo "$response" | grep -q "Successfully"; then
+              echo "✅ PR #$pr_number updated successfully"
+            elif echo "$response" | grep -q "already up to date\|up-to-date"; then
+              echo "ℹ️ PR #$pr_number is already up to date"
+            else
+              echo "⚠️ Could not update PR #$pr_number"
+              echo "$response"
+            fi
+            
+            # Esperar un poco para no saturar la API
+            sleep 2
+          done
+
+      - name: 📊 Summary
+        if: steps.list-prs.outputs.pr_numbers != ''
+        run: |
+          pr_list="${{ steps.list-prs.outputs.pr_numbers }}"
+          pr_count=$(echo "$pr_list" | wc -w)
+          echo "### 🔄 Dependabot PRs Updated" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Updated **$pr_count** Dependabot PR(s) with base branch" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "PRs updated: $pr_list" >> $GITHUB_STEP_SUMMARY
+
+      - name: 📊 No PRs Summary
+        if: steps.list-prs.outputs.pr_numbers == ''
+        run: |
+          echo "### ℹ️ No Dependabot PRs to Update" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "No open Dependabot PRs found." >> $GITHUB_STEP_SUMMARY
