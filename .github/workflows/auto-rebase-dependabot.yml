@@ -62,15 +62,15 @@ jobs:
         run: |
           pr_list="${{ steps.list-prs.outputs.pr_numbers }}"
           pr_count=$(echo "$pr_list" | wc -w)
-          echo "### 🔄 Dependabot PRs Rebased" >> $GITHUB_STEP_SUMMARY
+          echo "### 🔄 Dependabot PRs Updated" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Triggered rebase for **$pr_count** Dependabot PR(s)" >> $GITHUB_STEP_SUMMARY
+          echo "Updated **$pr_count** Dependabot PR(s) with base branch" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "PRs rebased: $pr_list" >> $GITHUB_STEP_SUMMARY
+          echo "PRs updated: $pr_list" >> $GITHUB_STEP_SUMMARY
 
       - name: 📊 No PRs Summary
         if: steps.list-prs.outputs.pr_numbers == ''
         run: |
-          echo "### ℹ️ No Dependabot PRs to Rebase" >> $GITHUB_STEP_SUMMARY
+          echo "### ℹ️ No Dependabot PRs to Update" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "No open Dependabot PRs found." >> $GITHUB_STEP_SUMMARY
