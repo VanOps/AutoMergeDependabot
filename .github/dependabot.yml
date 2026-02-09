@@ -12,25 +12,25 @@ updates:
       day: "monday"
       time: "09:00"
       timezone: "Europe/Madrid"
-    
+
     # Límite de PRs abiertos simultáneamente
     open-pull-requests-limit: 10
-    
+
     # Formato de nombres de rama
     pull-request-branch-name:
       separator: "-"
-    
+
     # Mensajes de commit
     commit-message:
       prefix: "build(deps)"
       prefix-development: "build(deps-dev)"
       include: "scope"
-    
+
     # Labels automáticos
     labels:
       - "dependencies"
       - "automerge"
-    
+
     # Agrupar dependencias para reducir PRs
     groups:
       # Grupo 1: Dependencias de desarrollo (minor/patch)
@@ -39,13 +39,13 @@ updates:
         update-types:
           - "minor"
           - "patch"
-      
+
       # Grupo 2: Dependencias de producción (solo patches)
       production-dependencies:
         dependency-type: "production"
         update-types:
           - "patch"
-      
+
       # Grupo 3: Next.js ecosystem
       nextjs-ecosystem:
         patterns:
@@ -56,17 +56,13 @@ updates:
         update-types:
           - "minor"
           - "patch"
-    
-    # Reviewers (opcional)
-    reviewers:
-      - "epicuro"
-    
+
     # Ignorar actualizaciones mayores de ciertos paquetes
     ignore:
       # Webpack major updates requieren revisión manual
       - dependency-name: "webpack"
         update-types: ["version-update:semver-major"]
-      
+
       # TypeScript major updates requieren revisión manual
       - dependency-name: "typescript"
         update-types: ["version-update:semver-major"]
@@ -80,15 +76,15 @@ updates:
       interval: "weekly"
       day: "monday"
       time: "10:00"
-    
+
     labels:
       - "github-actions"
       - "automerge"
-    
+
     commit-message:
       prefix: "ci"
       include: "scope"
-    
+
     # Agrupar todas las actualizaciones de actions
     groups:
       github-actions:
