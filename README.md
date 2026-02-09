@@ -43,10 +43,10 @@ graph TB
     D -->|Patch cualquier dep| E[✅ Auto-merge elegible]
     D -->|Minor dev dep| E
     D -->|Major o Minor prod| F[⚠️ Revisión manual]
-    
+
     E --> G[🧪 Run CI Tests]
     E --> H[🔒 Security Scan]
-    
+
     G --> I{Tests pasan?}
     H --> I
     I -->|No| J[❌ PR bloqueada]
@@ -55,16 +55,16 @@ graph TB
     L --> M{Branch actualizada?}
     M -->|No| N[⏳ Espera auto-rebase]
     M -->|Sí| O[✅ Merge automático]
-    
+
     F --> G
     F --> H
-    
+
     P[Push a main] --> Q[🔄 Auto-rebase workflow]
     Q --> R[Detecta PRs de Dependabot]
     R --> S[Actualiza PRs con base branch]
     S --> N
     N --> M
-    
+
     style E fill:#00b894
     style O fill:#00b894
     style F fill:#fdcb6e
@@ -99,10 +99,10 @@ Branch name pattern: main
 
 ✅ Require a pull request before merging
   Require approvals: 0  # Dependabot auto-aprueba
-  
+
 ✅ Require status checks to pass before merging
   ✅ Require branches to be up to date before merging
-  
+
   Required status checks:
   - 📊 Analyze Dependabot PR
   - 🧪 Run CI Tests
@@ -134,14 +134,14 @@ cp .github/workflows/auto-rebase-dependabot.yml <tu-repo>/.github/workflows/
 
 ```yaml
 # Cambiar directorio si tu proyecto tiene estructura diferente
-directory: "/src/app"  # o "/", "src/", etc.
+directory: "/src/app" # o "/", "src/", etc.
 
 # Ajustar horario
 schedule:
   interval: "weekly"
   day: "monday"
   time: "09:00"
-  timezone: "Europe/Madrid"  # Tu zona horaria
+  timezone: "Europe/Madrid" # Tu zona horaria
 ```
 
 ### 6️⃣ Confirmar Funcionamiento
@@ -165,18 +165,18 @@ gh pr list --author "app/dependabot"
 
 ### ✅ AUTO-MERGE AUTOMÁTICO
 
-| Tipo Update | Dependencia | Acción |
-|-------------|-------------|---------|
+| Tipo Update                    | Dependencia           | Acción                          |
+| ------------------------------ | --------------------- | ------------------------------- |
 | **Patch** <br> `1.2.3 → 1.2.4` | Cualquiera (prod/dev) | ✅ Auto-aprobación + Auto-merge |
-| **Minor** <br> `1.2.0 → 1.3.0` | Solo desarrollo | ✅ Auto-aprobación + Auto-merge |
-| **GitHub Actions** | Cualquier versión | ✅ Auto-aprobación + Auto-merge |
+| **Minor** <br> `1.2.0 → 1.3.0` | Solo desarrollo       | ✅ Auto-aprobación + Auto-merge |
+| **GitHub Actions**             | Cualquier versión     | ✅ Auto-aprobación + Auto-merge |
 
 ### ⚠️ REVISIÓN MANUAL REQUERIDA
 
-| Tipo Update | Dependencia | Acción |
-|-------------|-------------|---------|
-| **Major** <br> `1.x.x → 2.0.0` | Cualquiera | ⚠️ CI corre + Comentario + Espera revisión |
-| **Minor** <br> `1.2.0 → 1.3.0` | Producción | ⚠️ CI corre + Comentario + Espera revisión |
+| Tipo Update                    | Dependencia | Acción                                     |
+| ------------------------------ | ----------- | ------------------------------------------ |
+| **Major** <br> `1.x.x → 2.0.0` | Cualquiera  | ⚠️ CI corre + Comentario + Espera revisión |
+| **Minor** <br> `1.2.0 → 1.3.0` | Producción  | ⚠️ CI corre + Comentario + Espera revisión |
 
 ### 🔍 Ejemplo de Decisión
 
@@ -189,7 +189,7 @@ gh pr list --author "app/dependabot"
   },
   "devDependencies": {
     "eslint": "8.50.0",    // Desarrollo
-    "typescript": "5.2.0"  // Desarrollo  
+    "typescript": "5.2.0"  // Desarrollo
   }
 }
 
@@ -228,12 +228,12 @@ groups:
   development-dependencies:
     dependency-type: "development"
     update-types: ["minor", "patch"]
-  
+
   # Todos los patches de prod en un solo PR
   production-dependencies:
     dependency-type: "production"
     update-types: ["patch"]
-  
+
   # Next.js ecosystem junto
   nextjs-ecosystem:
     patterns: ["next", "react", "react-dom", "@next/*"]
@@ -244,8 +244,8 @@ groups:
 
 ```yaml
 labels:
-  - "dependencies"     # Identifica PRs de dependencias
-  - "automerge"        # Activa lógica de auto-merge
+  - "dependencies" # Identifica PRs de dependencias
+  - "automerge" # Activa lógica de auto-merge
 ```
 
 #### 🚫 Dependencias Ignoradas
@@ -278,6 +278,7 @@ ignore:
 **Trigger**: `push` a `main`
 
 **Proceso**:
+
 1. Detecta todas las PRs abiertas de Dependabot
 2. Llama a GitHub API para actualizar cada PR con la rama base
 3. GitHub automáticamente re-ejecuta CI checks
@@ -329,6 +330,7 @@ Cada PR ejecuta:
 ### ❌ Error: Cache dependency path not found
 
 **Síntoma**:
+
 ```
 Error: Some specified paths were not resolved, unable to cache dependencies.
 ```
@@ -339,12 +341,12 @@ Error: Some specified paths were not resolved, unable to cache dependencies.
 # ❌ Incorrecto
 - uses: actions/setup-node@v4
   with:
-    cache-dependency-path: './src/app/package-lock.json'
+    cache-dependency-path: "./src/app/package-lock.json"
 
 # ✅ Correcto
 - uses: actions/setup-node@v4
   with:
-    cache: 'npm'
+    cache: "npm"
     # cache se detecta automáticamente con working-directory
 ```
 
@@ -366,11 +368,13 @@ gh api /repos/{repo}/pulls/{pr}/update-branch
 **Síntoma**: Checks marcados como "Expected" pero nunca se ejecutan
 
 **Causas**:
+
 1. Branch protection configurada antes de que existieran los workflows
 2. El workflow no se disparó por permisos insuficientes
 3. Actualización de PR no disparó evento `synchronize`
 
 **Solución**:
+
 ```bash
 # Opción 1: Re-run workflows manualmente
 gh run rerun <run-id>
@@ -387,6 +391,7 @@ gh pr reopen <pr-number>
 ### ❌ Auto-merge no se activa
 
 **Verificar permisos**:
+
 ```bash
 # Ver si Actions tiene permisos de write
 gh api repos/:owner/:repo/actions/permissions
@@ -400,6 +405,7 @@ gh api repos/:owner/:repo/actions/permissions
 ```
 
 **Verificar auto-merge habilitado en branch protection**:
+
 ```bash
 gh api repos/:owner/:repo/branches/main/protection \
   --jq '.allow_auto_merge'
@@ -410,6 +416,7 @@ gh api repos/:owner/:repo/branches/main/protection \
 ### ❌ Dependabot no crea PRs
 
 **Verificar configuración**:
+
 ```bash
 # Ver si Dependabot está activo
 gh api repos/:owner/:repo/vulnerability-alerts
@@ -443,7 +450,7 @@ directory: "/"
 # ╔═══════════════════════════════════════╗
 # ║    Dependabot PRs Status Report       ║
 # ╚═══════════════════════════════════════╝
-# 
+#
 # 🤖 Total PRs: 3
 # ✅ Auto-merge elegibles: 2
 # ⚠️  Require manual review: 1
@@ -476,6 +483,7 @@ gh run view <RUN_ID> --log
 ### Dashboard en GitHub
 
 **Ver en Actions**:
+
 - `Actions` → `Dependabot Auto-Merge` → Ver runs recientes
 - Cada run muestra resumen con:
   - Tipo de update
@@ -540,7 +548,7 @@ groups:
 
 ```
 🤖 Dependabot detecta 8 updates disponibles:
-  
+
   ✅ Auto-merge (6):
   - #42: eslint 8.50.0 → 8.50.1 (patch dev)
   - #43: typescript 5.2.0 → 5.2.1 (patch dev)
@@ -548,7 +556,7 @@ groups:
   - #45: react 18.2.0 → 18.2.1 (patch prod)
   - #46: @types/node 20.8.0 → 20.9.0 (minor dev)
   - #47: prettier 3.0.0 → 3.1.0 (minor dev)
-  
+
   ⚠️ Manual review (2):
   - #48: next 14.0.4 → 14.1.0 (minor prod)
   - #49: webpack 5.88.0 → 6.0.0 (major)
@@ -588,6 +596,7 @@ PR #42 (eslint patch):
 ### 9:15-9:30 AM - PRs Se Mergean Secuencialmente
 
 Cada PR se mergea cuando:
+
 1. Branch está actualizada con main
 2. Todos los checks pasan
 3. Auto-merge está enabled
@@ -690,13 +699,13 @@ gh run list \
 
 ### KPIs Esperados
 
-| Métrica | Valor Objetivo |
-|---------|----------------|
-| % Auto-merge exitosos | >95% |
-| Tiempo promedio de merge | <15 minutos |
-| PRs que requieren intervención | <10% |
-| PRs revertidas | <1% |
-| Vulnerabilidades abiertas | 0 |
+| Métrica                        | Valor Objetivo |
+| ------------------------------ | -------------- |
+| % Auto-merge exitosos          | >95%           |
+| Tiempo promedio de merge       | <15 minutos    |
+| PRs que requieren intervención | <10%           |
+| PRs revertidas                 | <1%            |
+| Vulnerabilidades abiertas      | 0              |
 
 ## 🔗 Integración con Otros Servicios
 
@@ -772,6 +781,7 @@ gh run list \
   - Sin rollback plan
 
 **Recomendación**: Empieza conservador (solo patches), aumenta gradualmente.
+
 </details>
 
 <details>
@@ -789,28 +799,33 @@ gh run list \
 git revert <commit-sha>
 git push origin main
 ```
+
 </details>
 
 <details>
 <summary><strong>¿Cuántas PRs crea Dependabot por semana?</strong></summary>
 
 **Respuesta**: Depende de:
+
 - Número de dependencias (típico: 20-50)
 - Frecuencia de updates de maintainers
 - Tu configuración de `schedule:`
 
 **Promedio**:
+
 - Proyecto pequeño (10 deps): 2-5 PRs/semana
 - Proyecto mediano (30 deps): 5-15 PRs/semana
 - Proyecto grande (100+ deps): 20-50 PRs/semana
 
 **Reducir con `groups:`**: Combina múltiples updates en 1 PR
+
 ```yaml
 groups:
   all-dev-dependencies:
     dependency-type: "development"
 # 10 PRs individuales → 1 PR agrupada
 ```
+
 </details>
 
 <details>
@@ -823,15 +838,16 @@ updates:
   - package-ecosystem: "npm"
     directory: "/packages/frontend"
     # ...
-  
+
   - package-ecosystem: "npm"
     directory: "/packages/backend"
     # ...
-  
+
   - package-ecosystem: "npm"
     directory: "/packages/shared"
     # ...
 ```
+
 </details>
 
 <details>
@@ -853,6 +869,7 @@ updates:
     registries:
       - npm-github
 ```
+
 </details>
 
 ## 🎓 Mejores Prácticas
@@ -879,13 +896,13 @@ Edita `.github/workflows/dependabot-automerge.yml`:
     UPDATE_TYPE="${{ steps.metadata.outputs.update-type }}"
     DEPENDENCY_TYPE="${{ steps.metadata.outputs.dependency-type }}"
     DEPENDENCY_NAME="${{ steps.metadata.outputs.dependency-names }}"
-    
+
     # Custom logic: No auto-merge para react
     if [[ "$DEPENDENCY_NAME" == "react" ]]; then
       echo "eligible=false" >> $GITHUB_OUTPUT
       exit 0
     fi
-    
+
     # Custom logic: Auto-merge todos los patches
     if [[ "$UPDATE_TYPE" == "version-update:semver-patch" ]]; then
       echo "eligible=true" >> $GITHUB_OUTPUT
