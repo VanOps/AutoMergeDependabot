@@ -4,6 +4,12 @@ name: 🤖 Dependabot Auto-Merge
 on:
   pull_request:
     types: [opened, reopened, synchronize, ready_for_review]
+  workflow_call:
+    inputs:
+      pr_number:
+        description: "Número del PR de Dependabot"
+        required: true
+        type: number
 
 permissions:
   contents: write

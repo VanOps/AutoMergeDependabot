@@ -16,7 +16,10 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: 📋 List open Dependabot PRs
+      - name: � Checkout repository
+        uses: actions/checkout@v4
+
+      - name: �📋 List open Dependabot PRs
         id: list-prs
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -53,6 +56,7 @@ jobs:
             case "$http_code" in
               200|202)
                 echo "✅ PR #$pr_number update initiated successfully"
+                echo "ℹ️ GitHub will automatically trigger CI workflows once the update completes"
                 ;;
               422)
                 echo "ℹ️ PR #$pr_number is already up to date with base branch"
@@ -62,8 +66,8 @@ jobs:
                 ;;
             esac
             
-            # Esperar un poco para no saturar la API
-            sleep 2
+            # Esperar un poco para no saturar la API y permitir que GitHub procese
+            sleep 3
           done
 
       - name: 📊 Summary
