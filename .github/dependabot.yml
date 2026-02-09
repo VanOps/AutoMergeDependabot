@@ -78,7 +78,7 @@ updates:
     schedule:
       interval: "weekly"
       day: "monday"
-      time: "10:00"
+      time: "11:20"
 
     labels:
       - "github-actions"
