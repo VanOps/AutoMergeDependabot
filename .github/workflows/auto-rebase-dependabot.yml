@@ -41,16 +41,20 @@ jobs:
           for pr_number in ${{ steps.list-prs.outputs.pr_numbers }}; do
             echo "🔄 Updating PR #$pr_number with base branch"
             
-            # Actualizar la PR con la rama base usando GitHub API
-            if gh api \
+            # Actualizar la PR con la rama base usando GitHub API (sin expected_head_sha)
+            response=$(gh api \
               --method PUT \
               -H "Accept: application/vnd.github+json" \
               -H "X-GitHub-Api-Version: 2022-11-28" \
-              "/repos/${{ github.repository }}/pulls/${pr_number}/update-branch" \
-              -f expected_head_sha="$(gh pr view $pr_number --json headRefOid --jq '.headRefOid')"; then
+              "/repos/${{ github.repository }}/pulls/${pr_number}/update-branch" 2>&1) || true
+            
+            if echo "$response" | grep -q "Successfully"; then
               echo "✅ PR #$pr_number updated successfully"
+            elif echo "$response" | grep -q "already up to date\|up-to-date"; then
+              echo "ℹ️ PR #$pr_number is already up to date"
             else
-              echo "⚠️ Failed to update PR #$pr_number (may already be up to date)"
+              echo "⚠️ Could not update PR #$pr_number"
+              echo "$response"
             fi
             
             # Esperar un poco para no saturar la API
