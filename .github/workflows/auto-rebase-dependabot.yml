@@ -1,0 +1,72 @@
+---
+name: 🔄 Auto-Rebase Dependabot PRs
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  rebase-dependabot-prs:
+    name: 🔄 Rebase Dependabot PRs
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📋 List open Dependabot PRs
+        id: list-prs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Obtener PRs abiertas de Dependabot
+          prs=$(gh pr list \
+            --repo ${{ github.repository }} \
+            --author "app/dependabot" \
+            --state open \
+            --json number,headRefName \
+            --jq '.[] | .number')
+          
+          echo "Found PRs: $prs"
+          echo "pr_numbers<<EOF" >> $GITHUB_OUTPUT
+          echo "$prs" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: 🔄 Rebase Dependabot PRs
+        if: steps.list-prs.outputs.pr_numbers != ''
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Rebasar cada PR de Dependabot
+          for pr_number in ${{ steps.list-prs.outputs.pr_numbers }}; do
+            echo "🔄 Rebasing PR #$pr_number"
+            
+            # Comentar en el PR para que Dependabot lo rebase
+            gh pr comment "$pr_number" \
+              --repo ${{ github.repository }} \
+              --body "@dependabot rebase"
+            
+            echo "✅ Rebase triggered for PR #$pr_number"
+            
+            # Esperar un poco para no saturar la API
+            sleep 2
+          done
+
+      - name: 📊 Summary
+        if: steps.list-prs.outputs.pr_numbers != ''
+        run: |
+          pr_count=$(echo "${{ steps.list-prs.outputs.pr_numbers }}" | wc -w)
+          echo "### 🔄 Dependabot PRs Rebased" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Triggered rebase for **$pr_count** Dependabot PR(s)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "PRs rebased: ${{ steps.list-prs.outputs.pr_numbers }}" >> $GITHUB_STEP_SUMMARY
+
+      - name: 📊 No PRs Summary
+        if: steps.list-prs.outputs.pr_numbers == ''
+        run: |
+          echo "### ℹ️ No Dependabot PRs to Rebase" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "No open Dependabot PRs found." >> $GITHUB_STEP_SUMMARY
