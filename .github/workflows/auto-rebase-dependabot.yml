@@ -21,18 +21,16 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          # Obtener PRs abiertas de Dependabot
+          # Obtener PRs abiertas de Dependabot (en una sola línea)
           prs=$(gh pr list \
             --repo ${{ github.repository }} \
             --author "app/dependabot" \
             --state open \
-            --json number,headRefName \
-            --jq '.[] | .number')
+            --json number \
+            --jq '[.[].number] | join(" ")')
           
           echo "Found PRs: $prs"
-          echo "pr_numbers<<EOF" >> $GITHUB_OUTPUT
-          echo "$prs" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "pr_numbers=$prs" >> $GITHUB_OUTPUT
 
       - name: 🔄 Rebase Dependabot PRs
         if: steps.list-prs.outputs.pr_numbers != ''
@@ -57,12 +55,13 @@ jobs:
       - name: 📊 Summary
         if: steps.list-prs.outputs.pr_numbers != ''
         run: |
-          pr_count=$(echo "${{ steps.list-prs.outputs.pr_numbers }}" | wc -w)
+          pr_list="${{ steps.list-prs.outputs.pr_numbers }}"
+          pr_count=$(echo "$pr_list" | wc -w)
           echo "### 🔄 Dependabot PRs Rebased" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Triggered rebase for **$pr_count** Dependabot PR(s)" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "PRs rebased: ${{ steps.list-prs.outputs.pr_numbers }}" >> $GITHUB_STEP_SUMMARY
+          echo "PRs rebased: $pr_list" >> $GITHUB_STEP_SUMMARY
 
       - name: 📊 No PRs Summary
         if: steps.list-prs.outputs.pr_numbers == ''
