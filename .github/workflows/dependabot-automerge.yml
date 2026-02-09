@@ -18,13 +18,13 @@ jobs:
     name: 📊 Analyze Dependabot PR
     runs-on: ubuntu-latest
     if: github.actor == 'dependabot[bot]'
-    
+
     outputs:
       update-type: ${{ steps.metadata.outputs.update-type }}
       dependency-type: ${{ steps.metadata.outputs.dependency-type }}
       auto-merge-eligible: ${{ steps.check-eligibility.outputs.eligible }}
       dependency-names: ${{ steps.metadata.outputs.dependency-names }}
-    
+
     steps:
       - name: 📝 Fetch Dependabot metadata
         id: metadata
@@ -47,10 +47,10 @@ jobs:
         run: |
           UPDATE_TYPE="${{ steps.metadata.outputs.update-type }}"
           DEPENDENCY_TYPE="${{ steps.metadata.outputs.dependency-type }}"
-          
+
           echo "Update type: $UPDATE_TYPE"
           echo "Dependency type: $DEPENDENCY_TYPE"
-          
+
           # Auto-merge elegible para:
           # - Patches de cualquier dependencia
           # - Minors de dependencias de desarrollo
@@ -71,11 +71,11 @@ jobs:
     needs: analyze-pr
     runs-on: ubuntu-latest
     if: github.actor == 'dependabot[bot]'
-    
+
     defaults:
       run:
         working-directory: ./src/app
-    
+
     steps:
       - name: 📥 Checkout PR
         uses: actions/checkout@v4
@@ -85,9 +85,8 @@ jobs:
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: './src/app/package-lock.json'
+          node-version: "20"
+          cache: "npm"
 
       - name: 📦 Install dependencies
         run: npm ci
@@ -116,11 +115,11 @@ jobs:
     needs: analyze-pr
     runs-on: ubuntu-latest
     if: github.actor == 'dependabot[bot]'
-    
+
     defaults:
       run:
         working-directory: ./src/app
-    
+
     steps:
       - name: 📥 Checkout PR
         uses: actions/checkout@v4
@@ -130,9 +129,8 @@ jobs:
       - name: 🔧 Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: './src/app/package-lock.json'
+          node-version: "20"
+          cache: "npm"
 
       - name: 📦 Install dependencies
         run: npm ci
@@ -157,10 +155,10 @@ jobs:
     if: |
       github.actor == 'dependabot[bot]' &&
       needs.analyze-pr.outputs.auto-merge-eligible == 'true'
-    
+
     permissions:
       pull-requests: write
-    
+
     steps:
       - name: ✅ Approve pull request
         env:
@@ -188,11 +186,11 @@ jobs:
     if: |
       github.actor == 'dependabot[bot]' &&
       needs.analyze-pr.outputs.auto-merge-eligible == 'true'
-    
+
     permissions:
       contents: write
       pull-requests: write
-    
+
     steps:
       - name: 🤖 Enable auto-merge
         env:
@@ -219,10 +217,10 @@ jobs:
     if: |
       github.actor == 'dependabot[bot]' &&
       needs.analyze-pr.outputs.auto-merge-eligible == 'false'
-    
+
     permissions:
       pull-requests: write
-    
+
     steps:
       - name: 💬 Add comment
         env:
@@ -230,13 +228,13 @@ jobs:
           PR_URL: ${{ github.event.pull_request.html_url }}
         run: |
           gh pr comment "$PR_URL" --body "⚠️ **Manual Review Required**
-          
+
           This PR updates **${{ needs.analyze-pr.outputs.dependency-names }}** with update type: **${{ needs.analyze-pr.outputs.update-type }}**
-          
+
           CI tests have passed, but this update requires manual review before merging because:
           - Major version updates need careful evaluation
           - Production dependency updates require validation
-          
+
           Please review the changes and approve if safe to merge."
 
       - name: 📊 Manual Review Summary
